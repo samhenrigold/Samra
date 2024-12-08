@@ -27,6 +27,8 @@ class RenditionListViewController: NSViewController {
     var collection: RenditionCollection
     let fileURL: URL
     
+    private var scrollObserver: NSObjectProtocol?
+    
     init(catalog: CUICatalog, collection: RenditionCollection, fileURL: URL) {
         self.catalog = catalog
         self.collection = collection
@@ -99,9 +101,10 @@ class RenditionListViewController: NSViewController {
         view = scrollView
         view.frame.size = CGSize(width: 724, height: 676)
         
-        NotificationCenter.default.addObserver(forName: NSScrollView.didEndLiveScrollNotification, object: scrollView, queue: nil) { [unowned self] _ in
-            let vc = splitViewParent?.splitViewItems[0].viewController as? TypesListViewController
-            guard let vc, let currentSection = collectionView.indexPathsForVisibleItems().first?.section else {
+        let observer = NotificationCenter.default.addObserver(forName: NSScrollView.didEndLiveScrollNotification, object: scrollView, queue: nil) { [weak self] _ in
+            guard let self = self else { return }
+            let vc = self.splitViewParent?.splitViewItems[0].viewController as? TypesListViewController
+            guard let vc, let currentSection = self.collectionView.indexPathsForVisibleItems().first?.section else {
                 return
             }
             
@@ -110,6 +113,8 @@ class RenditionListViewController: NSViewController {
             vc.tableView.selectRowIndexes([currentSection], byExtendingSelection: true)
             vc.ignoreChanges = false
         }
+        
+        self.scrollObserver = observer
         
         collectionView.registerForDraggedTypes(NSImage.imageTypes.map { .init($0) })
         collectionView.setDraggingSourceOperationMask(.every, forLocal: true)
@@ -160,6 +165,9 @@ class RenditionListViewController: NSViewController {
     }
     
     deinit {
+        if let observer = scrollObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
         print("And I'm tripping and falling..")
     }
 }
